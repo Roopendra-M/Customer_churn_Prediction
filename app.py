@@ -1,11 +1,21 @@
 import streamlit as st
 import numpy as np
+import os
+
+# Suppress TensorFlow logging
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+
 from tensorflow.keras.models import load_model
 import joblib
 
-# Load model and scaler
-model = load_model("model.h5")
-scaler = joblib.load("scaler.pkl")
+# Cache model and scaler to prevent repeated loading
+@st.cache_resource
+def load_resources():
+    model = load_model("model.h5")
+    scaler = joblib.load("scaler.pkl")
+    return model, scaler
+
+model, scaler = load_resources()
 
 st.set_page_config(page_title="Customer Churn Prediction", page_icon="🏦")
 
@@ -36,8 +46,7 @@ geo_map = {"France": [1, 0, 0], "Germany": [0, 0, 1], "Spain": [0, 1, 0]}
 gender_encoded = 1 if gender == "Male" else 0
 geo_encoded = geo_map[geography]
 
-# Construct input array (Matches training order: Geography_Encoded, Gender_Encoded, CreditScore, Age, Tenure, Balance, NumOfProducts, HasCrCard, IsActiveMember, EstimatedSalary)
-# Based on common patterns and the scaler input requirements.
+# Construct input array
 input_data = np.array(geo_encoded + [gender_encoded, credit_score, age, tenure, balance,
                                      num_of_products, has_credit_card,
                                      is_active_member, estimated_salary]).reshape(1, -1)
